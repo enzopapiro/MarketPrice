@@ -79,6 +79,6 @@ public class Price {
         String bidString = arith.toString(this.bid.getValue());
         String askString = arith.toString(this.ask.getValue());
 
-        return String.format("%d %s %s/%s %s",this.id,this.symbol.getCodeString(),bidString,askString,getTimestampAsZonedDateTime());
+        return String.format("%d %s %s/%s %s",this.id,this.symbol!=null?symbol.getCodeString():"",bidString,askString,getTimestampAsZonedDateTime());
     }
 }
