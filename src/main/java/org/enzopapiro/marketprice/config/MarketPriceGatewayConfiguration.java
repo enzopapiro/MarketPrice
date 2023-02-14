@@ -12,9 +12,10 @@ import java.util.stream.Collectors;
  */
 public class MarketPriceGatewayConfiguration {
     private List<String> subscriptionSymbols;
-
     private long idGeneratorProcessId;
     private int ringbuffersize;
+    private int cacheWriteWinProbability;
+
     public void load() throws IOException {
 
         Properties properties = new Properties();
@@ -30,6 +31,8 @@ public class MarketPriceGatewayConfiguration {
         idGeneratorProcessId = Long.parseLong(properties.getProperty("id.gen.process.id","1"));
 
         ringbuffersize = Integer.parseInt(properties.getProperty("ringbuffer.size","4096"));
+
+        cacheWriteWinProbability = Integer.parseInt(properties.getProperty("cache.write.win.probability", "50"));
     }
 
     public List<String> getSubscriptionSymbols(){
@@ -42,5 +45,8 @@ public class MarketPriceGatewayConfiguration {
 
     public int getRingbufferSize() {
         return ringbuffersize;
+    }
+    public int getCacheWriteWinProbability() {
+        return cacheWriteWinProbability;
     }
 }

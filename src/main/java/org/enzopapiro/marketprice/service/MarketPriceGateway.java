@@ -81,15 +81,8 @@ public class MarketPriceGateway {
                     "%d, EUR/USD, 1.1050,1.2050,01-06-2020 12:01:01:001\n%d, EUR/JPY, 119.50,119.95,01-06-2020 12:01:02:002\n%d, GBP/USD, 1.2510,1.2570,01-06-2020 12:01:02:002",
             };
             int id = 1;
-            for(int i=0;i<10000;i++) {
+            for(int i=0;i<Integer.MAX_VALUE;i++) {
                 mpg.onSimulateMessage(String.format(msgs[i%msgs.length], id++, id++, id++));
-                try {
-                    // Note if you don't have enough cores you may need to sleep
-                    // for the purposes of the simulation, ideally we'd pin the thread to individual cores.
-                    Thread.sleep(10, 1);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
             }
         });
 
@@ -99,11 +92,6 @@ public class MarketPriceGateway {
             int i = 0;
             while(true) {
                 mpg.onSimulateRequest(pairs[i++%pairs.length]);
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
             }
         });
     }

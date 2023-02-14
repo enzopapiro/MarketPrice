@@ -21,7 +21,7 @@ public class MarketPriceGatewayConsumer implements MessageHandler {
 
     private CharBuffer receiveBuffer;
 
-    private SymbolParser symbolParser;
+    private ThreadLocal<SymbolParser> tlSymbolParser = ThreadLocal.withInitial(SymbolParser::new);
 
     private DateTimeParser dateTimeParser;
 
@@ -35,7 +35,6 @@ public class MarketPriceGatewayConsumer implements MessageHandler {
     public MarketPriceGatewayConsumer(final MarketPriceGatewayConfiguration config, final RingBuffer ringBuffer){
         this.ringBuffer = ringBuffer;
         this.receiveBuffer = CharBuffer.allocate(256);
-        this.symbolParser = new SymbolParser();
         this.dateTimeParser = new DateTimeParser();
         this.position = new Position();
         this.priceManager = new MarketPriceManager(config);
@@ -76,7 +75,7 @@ public class MarketPriceGatewayConsumer implements MessageHandler {
 
             DecimalParser.parseNumberToDelim(msg,position, DELIM,number);
 
-            Symbol symbol = symbolParser.parse(msg,position.increment(), DELIM);
+            Symbol symbol = tlSymbolParser.get().parse(msg,position.increment(), DELIM);
 
             DecimalParser.parseNumberToDelim(msg,position.increment(), DELIM,bid);
 
@@ -86,13 +85,15 @@ public class MarketPriceGatewayConsumer implements MessageHandler {
 
             priceManager.update(number.getValue(),symbol,bid.getValue(),ask.getValue(),bid.getScale(),ts);
 
+        } catch(Throwable e){
+            e.printStackTrace();
         } finally {
             clearReceiveBuffer();
         }
     }
 
     public void onRateRequest(CharSequence msg){
-        Symbol symbol = symbolParser.parse(msg,tlPosition.get().reset(), DELIM);
+        Symbol symbol = tlSymbolParser.get().parse(msg,tlPosition.get().reset(), DELIM);
         priceManager.request(symbol);
     }
 

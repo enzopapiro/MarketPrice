@@ -7,11 +7,11 @@ import org.decimal4j.scale.Scales;
 import org.enzopapiro.marketprice.config.MarketPriceGatewayConfiguration;
 import org.enzopapiro.marketprice.domain.Price;
 import org.enzopapiro.marketprice.domain.Symbol;
+import org.enzopapiro.marketprice.util.concurrency.AtomicReadWriteSynchroniser;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MarketPriceManager {
 
@@ -21,14 +21,15 @@ public class MarketPriceManager {
     }
 
     class PriceEntry {
-         long messageId;
+        long messageId;
 
-         Price price;
+        Price price;
 
-        AtomicBoolean updateInProgress = new AtomicBoolean(false);
+        AtomicReadWriteSynchroniser sync;
 
-        PriceEntry(Price price){
+        PriceEntry(MarketPriceGatewayConfiguration config,Price price){
             this.price = price;
+            this.sync = new AtomicReadWriteSynchroniser(config.getCacheWriteWinProbability());
         }
 
         public Price getPrice() {
@@ -44,16 +45,19 @@ public class MarketPriceManager {
         }
 
         public boolean startUpdate(){
-            return updateInProgress.compareAndSet(false,true);
+            while(!sync.tryWrite());
+            return true;
         }
 
-        public void endUpdate(){
-            updateInProgress.set(false);
+        public void complete(){
+            sync.done();
         }
 
-        public boolean notReadable(){
-            return updateInProgress.get();
+        public boolean startRead(){
+            while(!sync.tryRead());
+            return true;
         }
+
     }
     private final ConcurrentMap<Symbol, PriceEntry> cache;
 
@@ -65,7 +69,7 @@ public class MarketPriceManager {
         cache = new ConcurrentHashMap<>(symbols.size());
         for(String s:symbols){
             Symbol symbol = new Symbol(s);
-            cache.put(symbol,new PriceEntry(new Price().setSymbol(symbol)));
+            cache.put(symbol,new PriceEntry(config,new Price().setSymbol(symbol)));
         }
         idGenerator = new SnowflakeIdGenerator(config.getIdGeneratorProcessId());
     }
@@ -92,7 +96,7 @@ public class MarketPriceManager {
                 publish(PublishReason.Update,p);
             }
         }finally{
-            pe.endUpdate();
+            pe.complete();
         }
     }
 
@@ -101,7 +105,7 @@ public class MarketPriceManager {
         PriceEntry pe = get(symbol);
         if(pe!=null ){
             try {
-                pe.startUpdate();
+                pe.startRead();
                 long currentId = pe.getMessageId();
                 Price cached = pe.getPrice();
                 outboundPrice.setId(cached.getId());
@@ -111,7 +115,7 @@ public class MarketPriceManager {
                 outboundPrice.setTimestamp(cached.getTimestamp());
                 publish(PublishReason.Request,outboundPrice);
             }finally{
-                pe.endUpdate();
+                pe.complete();
             }
         }
     }
@@ -139,8 +143,6 @@ public class MarketPriceManager {
     }
 
     public void publish(PublishReason reason,Price price){
-        if(reason==PublishReason.Request) {
-            System.out.println(String.format("%s %s", reason, price.toString()));
-        }
+        System.out.println(String.format("%s %s", reason, price.toString()));
     }
 }

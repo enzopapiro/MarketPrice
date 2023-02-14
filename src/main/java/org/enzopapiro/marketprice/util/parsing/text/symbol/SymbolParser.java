@@ -15,7 +15,7 @@ public class SymbolParser {
 
     public SymbolParser() {
         receiveBuffer = CharBuffer.allocate(6);
-        symbolMap = new Long2ObjectHashMap<>();
+        symbolMap = new Long2ObjectHashMap<>(100,0.75f,false);
     }
 
     public static char normaliseChar(char c) {
