@@ -9,11 +9,11 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
 public class Price {
-    private volatile long id;
-    private volatile Symbol symbol;
-    private volatile Decimal bid;
-    private volatile Decimal ask;
-    private volatile long  timestamp;
+    private long id;
+    private Symbol symbol;
+    private Decimal bid;
+    private Decimal ask;
+    private long  timestamp;
 
     public Price(){
         this.bid = new Decimal();
@@ -68,6 +68,18 @@ public class Price {
 
     public Decimal getAsk() {
         return ask;
+    }
+
+    public String getBidAsString(){
+        ScaleMetrics sm = Scales.getScaleMetrics(this.bid.getScale());
+        DecimalArithmetic arith = sm.getDefaultArithmetic();
+        return arith.toString(this.bid.getValue());
+    }
+
+    public String getAskAsString(){
+        ScaleMetrics sm = Scales.getScaleMetrics(this.ask.getScale());
+        DecimalArithmetic arith = sm.getDefaultArithmetic();
+        return arith.toString(this.ask.getValue());
     }
 
     @Override
