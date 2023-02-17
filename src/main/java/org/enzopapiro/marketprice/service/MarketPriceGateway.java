@@ -69,6 +69,25 @@ public class MarketPriceGateway {
     }
 
     private static ExecutorService simulationThreads = Executors.newFixedThreadPool(2);
+
+    /**
+     * The main method serves as an example of how these classes can work.
+     *
+     * A hard coded array of strings representing a small array of messages is used to submit work into the service,
+     * I vary some attributes using a rudimentary String.format(..) operation however in another context this test would
+     * have been developed to externalise the market test data to vary the message grouping, the bid/ask rates and other attributes.
+     *
+     * Similarly, with the "pretend" requests for rates thread, we could externalise the requests and possibly the frequency.
+     *
+     * This of course would be done for a purpose, so that we could parameterise input and provide a certain level of automation to benchmarking & verification
+     * of our business logic.
+     *
+     *
+     * @param args
+     *
+     * @throws IOException
+     * @throws InterruptedException
+     */
     public static void main(String[] args) throws IOException, InterruptedException {
 
         MarketPriceGateway mpg = new MarketPriceGateway();
@@ -76,6 +95,9 @@ public class MarketPriceGateway {
         mpg.waitForStart();
 
         simulationThreads.execute(()->{
+
+            // NOTE just for a simple simulation, we should really externalise test data.
+
             String msgs[] = {
                     "%d, EUR/USD, 1.1000,1.2000,01-06-2020 12:01:01:001\n%d, EUR/JPY, 119.60,119.90,01-06-2020 12:01:02:002\n%d, GBP/USD, 1.2500,1.2560,01-06-2020 12:01:02:002",
                     "%d, EUR/USD, 1.1050,1.2050,01-06-2020 12:01:01:001\n%d, EUR/JPY, 119.50,119.95,01-06-2020 12:01:02:002\n%d, GBP/USD, 1.2510,1.2570,01-06-2020 12:01:02:002",
@@ -87,6 +109,8 @@ public class MarketPriceGateway {
         });
 
         simulationThreads.execute(()->{
+
+            // NOTE should externalise
             String [] pairs = { "EURUSD", "EURJPY", "GBPUSD"};
 
             int i = 0;

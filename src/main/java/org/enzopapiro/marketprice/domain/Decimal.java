@@ -3,8 +3,8 @@ package org.enzopapiro.marketprice.domain;
 import java.util.Objects;
 
 public class Decimal {
-    private volatile long value;
-    private volatile int scale;
+    private long value;
+    private int scale;
 
     public Decimal setScale(int scale) {
         this.scale = scale;
