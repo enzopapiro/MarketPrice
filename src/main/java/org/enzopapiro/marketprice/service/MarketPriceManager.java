@@ -9,17 +9,12 @@ import org.enzopapiro.marketprice.domain.Price;
 import org.enzopapiro.marketprice.domain.Symbol;
 import org.enzopapiro.marketprice.util.concurrency.AtomicReadWriteSynchroniser;
 
+import java.nio.channels.ScatteringByteChannel;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 public class MarketPriceManager {
-
-    enum PublishReason {
-        Update,
-        Request
-    }
-
     class PriceEntry {
         long messageId;
 
@@ -60,18 +55,19 @@ public class MarketPriceManager {
 
     }
     private final ConcurrentMap<Symbol, PriceEntry> cache;
-
     private final SnowflakeIdGenerator idGenerator;
-
     private final ThreadLocal<Price> tlPrice = ThreadLocal.withInitial(Price::new);
-    public MarketPriceManager(MarketPriceGatewayConfiguration config){
+    private final MarketPriceAction[] actions;
+
+    public MarketPriceManager(MarketPriceGatewayConfiguration config, MarketPriceAction[] actions){
         List<String> symbols = config.getSubscriptionSymbols();
-        cache = new ConcurrentHashMap<>(symbols.size());
+        this.cache = new ConcurrentHashMap<>(symbols.size());
         for(String s:symbols){
             Symbol symbol = new Symbol(s);
-            cache.put(symbol,new PriceEntry(config,new Price().setSymbol(symbol)));
+            this.cache.put(symbol,new PriceEntry(config,new Price().setSymbol(symbol)));
         }
         idGenerator = new SnowflakeIdGenerator(config.getIdGeneratorProcessId());
+        this.actions = actions;
     }
 
     private PriceEntry get(Symbol symbol){
@@ -87,7 +83,7 @@ public class MarketPriceManager {
         //
         try {
             pe.startUpdate();
-            if (pe != null && pe.messageId < messageId) {
+            if (pe != null && pe.messageId < messageId ) {
                 pe.setMessageId(messageId);
                 Price p = pe.getPrice();
                 p.setId(idGenerator.nextId());
@@ -128,7 +124,6 @@ public class MarketPriceManager {
     public static Price applyBidAskMargin(Price price, long bid, long ask, int priceScale) {
         ScaleMetrics sm = Scales.getScaleMetrics(MAX_MARGIN_SCALE);
         DecimalArithmetic arith = sm.getDefaultArithmetic();
-
         long minusMargin = arith.fromDouble(BID_MARGIN);
         long marginBid = arith.multiplyByLong(bid,minusMargin);
         marginBid = arith.divideByLong(marginBid,MAX_SCALE_DIVISOR);
@@ -143,6 +138,8 @@ public class MarketPriceManager {
     }
 
     public void publish(PublishReason reason,Price price){
-        System.out.println(String.format("%s %s", reason, price.toString()));
+        for (MarketPriceAction action : actions) {
+            action.onPricePublish(reason,price);
+        }
     }
 }

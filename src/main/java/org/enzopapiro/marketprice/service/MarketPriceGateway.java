@@ -22,13 +22,15 @@ public class MarketPriceGateway {
 
     protected AtomicBoolean running = new AtomicBoolean(true);
     protected MarketPriceSubscriber subscriber;
-    private MarketPriceGatewayConsumer consumer;
+    protected MarketPriceGatewayConsumer consumer;
 
-    private CountDownLatch startLatch = new CountDownLatch(1);
+    protected CountDownLatch startLatch;
+    protected MarketPriceAction[] actions;
+    private String env;
 
-    public MarketPriceGateway() throws IOException {
-        this.config = new MarketPriceGatewayConfiguration();
-        this.config.load();
+    public MarketPriceGateway(String env,MarketPriceAction[] actions){
+        this.env = env;
+        this.actions = actions;
     }
 
     public RingBuffer constructRingBuffer(final int ringBufferSize) {
@@ -43,17 +45,34 @@ public class MarketPriceGateway {
         return new OneToOneRingBuffer(internalBuffer);
     }
 
-    public void start() {
+    public void setMarketPriceActions(MarketPriceAction[] actions){
+        this.actions = actions;
+    }
+
+    public void start() throws IOException {
+
+        this.startLatch = new CountDownLatch(1);
+        this.config = new MarketPriceGatewayConfiguration(env);
+        this.config.load();
+
+        if (actions == null || actions.length == 0) {
+            throw new IllegalStateException("Please ensure MarketPriceActions are injected into MarketPriceGateway before starting the service.");
+        }
 
         RingBuffer ringBuffer = constructRingBuffer(this.config.getRingbufferSize());
 
         subscriber = new MarketPriceGatewaySubscriber(this.config, ringBuffer, '\n');
 
-        consumer = new MarketPriceGatewayConsumer(this.config, ringBuffer);
+        consumer = new MarketPriceGatewayConsumer(this.config, ringBuffer, actions);
 
         worker.execute(() -> {
-            while (running.get() == true) {
-                consumer.doWork();
+            while (running.get()) {
+                try {
+                    consumer.doWork();
+                } catch (Throwable e) { // Note for a mission-critical thread we will want it to continue if problematic events occur that throw all manner exceptions, however
+                                        // this section is here just to highlight we would do more here in terms of logging and signalling to monitoring infrastructure.
+                    e.printStackTrace();
+                }
             }
         });
 
@@ -90,7 +109,7 @@ public class MarketPriceGateway {
      */
     public static void main(String[] args) throws IOException, InterruptedException {
 
-        MarketPriceGateway mpg = new MarketPriceGateway();
+        MarketPriceGateway mpg = new MarketPriceGateway("SIM", new MarketPriceAction[] {(r,p)->System.out.println(String.format("SIM %s %s", r, p.toString()))});
         mpg.start();
         mpg.waitForStart();
 

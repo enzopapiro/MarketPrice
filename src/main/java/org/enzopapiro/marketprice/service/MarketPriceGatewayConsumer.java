@@ -32,12 +32,16 @@ public class MarketPriceGatewayConsumer implements MessageHandler {
     private Decimal ask = new Decimal();
     private MarketPriceManager priceManager;
     private ThreadLocal<Position> tlPosition = ThreadLocal.withInitial(Position::new);
-    public MarketPriceGatewayConsumer(final MarketPriceGatewayConfiguration config, final RingBuffer ringBuffer){
+    public MarketPriceGatewayConsumer(final MarketPriceGatewayConfiguration config, final RingBuffer ringBuffer, final MarketPriceAction[] actions){
         this.ringBuffer = ringBuffer;
         this.receiveBuffer = CharBuffer.allocate(256);
         this.dateTimeParser = new DateTimeParser();
         this.position = new Position();
-        this.priceManager = new MarketPriceManager(config);
+        this.priceManager = new MarketPriceManager(config,actions);
+    }
+
+    public MarketPriceGatewayConsumer(final MarketPriceGatewayConfiguration config, final RingBuffer ringBuffer, final MarketPriceAction action) {
+        this(config,ringBuffer,new MarketPriceAction[]{action});
     }
 
     /**
@@ -68,8 +72,6 @@ public class MarketPriceGatewayConsumer implements MessageHandler {
 
         try {
             CharSequence msg = decodeAsCharSequence(buffer, index, length);
-
-            //log(msg);
 
             position.reset();
 

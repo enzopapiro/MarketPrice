@@ -45,10 +45,19 @@
       <resource>
         <directory>src/main/resources</directory>
         <includes>
-          <include>*.properties</include>
+          <include>**/*.properties</include>
         </includes>
       </resource>
     </resources>
+    <testResources>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <includes>
+          <include>**/*.properties</include>
+        </includes>
+        <filtering>false</filtering>
+      </testResource>
+    </testResources>
   </build>
 
   <dependencies>
@@ -98,6 +107,13 @@
       <groupId>io.cucumber</groupId>
       <artifactId>cucumber-junit</artifactId>
       <version>6.10.3</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <version>4.1.0</version>
       <scope>test</scope>
     </dependency>
 
